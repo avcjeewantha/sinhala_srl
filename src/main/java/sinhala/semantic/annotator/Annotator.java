@@ -1,6 +1,6 @@
 package sinhala.semantic.annotator;
 
-public class Application {
+public class Annotator {
     public static void main(String args[]){
 
     }
