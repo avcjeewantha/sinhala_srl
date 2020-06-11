@@ -41,6 +41,10 @@ public class HeuristicAligner {
         // Pre-computed translation probabilities are packaged in src/main/resources/alignment and always follow the
         // pattern "language"-hmm.dict
         LineReader lineReader = LineReader.readFromClasspathFile("alignment/" + language.toString().toLowerCase() + "-hmm.dict");
+        LineReader augdicSi = LineReader.readFromClasspathFile("alignment/" + language.toString().toLowerCase() + "-aug.si");
+        LineReader augdicEn = LineReader.readFromClasspathFile("alignment/" + language.toString().toLowerCase() + "-aug.en");
+        LineReader dicSi = LineReader.readFromClasspathFile("alignment/" + language.toString().toLowerCase() + "-terms.si");
+        LineReader dicEn = LineReader.readFromClasspathFile("alignment/" + language.toString().toLowerCase() + "-terms.en");
 
         // Read dictionary into memory.
         while (true) {
@@ -54,7 +58,26 @@ public class HeuristicAligner {
             }
         }
 
+        // Read aug dictionary into memory.
+        DictionaryReader(dictionary, augdicSi, augdicEn);
+
+        // Read Si dictionary into memory.
+        DictionaryReader(dictionary, dicSi, dicEn);
+
         return dictionary;
+    }
+
+    private static void DictionaryReader(HeuristicAligner dictionary, LineReader dicSi, LineReader dicEn) {
+        while (true) {
+            String siTermsLine = dicSi.getNextLine();
+            String enTermsLine = dicEn.getNextLine();
+            if (siTermsLine == null) break;
+            siTermsLine = siTermsLine.trim();
+            enTermsLine = enTermsLine.trim();
+            Double prob = 0.99;
+            dictionary.similarities.put(enTermsLine, siTermsLine, prob);
+
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
+import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,13 +38,12 @@ public class Annotator {
                 break;
             }else{
                 Sentence parsedSL = slPipeline.parse(sourceSentence.trim());
-                logger.info(parsedSL.toConllU());
+//                logger.info(parsedSL.toConllU());
 
                 Sentence parsedTL = tlPipeline.parse(targetSentence.trim());
-                logger.info(parsedTL.toConllU());
+//                logger.info(parsedTL.toConllU());
 
                 ProcessedSentence processedSentence = alignAndProject(parsedSL, parsedTL, Language.SINHALA);
-
 //                String json = new Gson().toJson(processedSentence);
 //                logger.info("json = " + json);
             }

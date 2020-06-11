@@ -69,7 +69,7 @@ public class BiSentence {
                     other = 0.5;
                     if (other > similarity) similarity = other;
                 }
-
+                System.out.println(similarity);
                 // if similarity exists, add alignment
                 if (similarity > 0.01) {
 

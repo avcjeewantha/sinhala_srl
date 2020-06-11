@@ -24,6 +24,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.zip.ZipFile;
@@ -252,69 +254,66 @@ public class PipelineWrapper {
                     e.printStackTrace();
                 }
             }
-            // Todo Get pos word by word
-            String fullFilePath = "tnt";
-            String Param = "sinhala_final ./tag.txt";
-            String[] cmd = {"/bin/bash", fullFilePath, Param};
+
+
+            String s;
+            Process p;
+//            StringBuilder output = new StringBuilder();
+
             try {
-                Runtime.getRuntime().exec(cmd);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-//            ProcessBuilder processBuilder = new ProcessBuilder();
-//            processBuilder.command("bash", "-c", "tnt sinhala_final ./tag.txt");
-//            try {
-//
-//                Process process = processBuilder.start();
-//
-//                StringBuilder output = new StringBuilder();
-//
-//                BufferedReader reader = new BufferedReader(
-//                        new InputStreamReader(process.getInputStream()));
-//
-//                String line;
-//                while ((line = reader.readLine()) != null) {
-//                    output.append(line + "\n");
-//                }
-//
-//                int exitVal = process.waitFor();
-//                if (exitVal == 0) {
-//                    System.out.println("Success!");
-//                    System.out.println(output);
-//                    System.exit(0);
-//                } else {
-//                    //abnormal...
-//                }
-//
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-            logger.error(cmd);
-            // this is the text of the token
-            String word = "word";
+                p = Runtime.getRuntime().exec("tnt ./tnt/models/sinhala_final ./tag.txt");
+                BufferedReader bR = new BufferedReader(
+                        new InputStreamReader(p.getInputStream()));
 
-            // this is the POS tag of the token
-            String pos = "POS";
+                Sentence parse = new Sentence();
+                while((s = bR.readLine())!=null){
+                    if(!s.startsWith("%")){
+                        ArrayList<String> wordsPos = new ArrayList<>();
+                        for (String word : s.split("\t")){
+                            word = word.replaceAll("^[ \t]+|[ \t]+$", "");
+                            if(!word.equals("")){
+                                wordsPos.add(word);
+                            }
+                        }
+                        // this is the text of the token
+                        String word = wordsPos.get(0);
+                        String pos;
+                        // this is the POS tag of the token
+                        if (wordsPos.get(1).equals("NNC")){
+                            pos = "NN";
+                        } else if (wordsPos.get(1).equals("VP")){
+                            pos = "VBP";
+                        } else {
+                            pos = wordsPos.get(1);
+                        }
 
-            Sentence parse = new Sentence();
+                        Token newtoken = parse.newToken().setText(word).setPos(pos);
+                        newtoken.setLemma(text);
+                        // Determine universal dependencies from tagset
+                        toUniversalDependencies(parse);
 
-            Token newtoken = parse.newToken().setText(word).setPos(pos);
+//                        output.append(s.split("\t")[0]).append(s.split("\t")[2]).append("\n");
+                    }
+                }
 
-            // Determine universal dependencies from tagset
-            toUniversalDependencies(parse);
+                toUniversalDependencies(parse);
+                for (Token token : parse.getTokens()) {
+                    if (token.getHeadId() == 0) token.setDeprel("root");
+                }
 
-            for (Token token : parse.getTokens()) {
-                if (token.getHeadId() == 0) token.setDeprel("root");
+                p.waitFor();
+                logger.info ("exit: " + p.exitValue());
+                p.destroy();
+
+                return parse;
+            } catch (Exception e) {
+                logger.info (e);
             }
 
-            return parse;
-
-        }
+    }
 
         return null;
-    }
+}
 
     /**
      * Helper method to format sentence for SRL (MATE SRL somehow needs the root field as textual string in array).
@@ -362,6 +361,7 @@ public class PipelineWrapper {
             if (token.getPos().startsWith("DT")) token.setPosUniversal("DET");
             if (token.getPos().startsWith("IN")) token.setPosUniversal("ADP");
             if (token.getPos().equals("NN")) token.setPosUniversal("NOUN");
+            if (token.getPos().equals("NNC")) token.setPosUniversal("NOUN");
             if (token.getPos().equals("NNS")) token.setPosUniversal("NOUN");
             if (token.getPos().startsWith("JJ")) token.setPosUniversal("ADJ");
             if (token.getPos().startsWith("PRP")) token.setPosUniversal("PRON");
