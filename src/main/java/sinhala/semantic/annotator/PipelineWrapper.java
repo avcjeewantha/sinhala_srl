@@ -13,6 +13,16 @@ import edu.stanford.nlp.util.CoreMap;
 import is2.data.SentenceData09;
 import is2.lemmatizer.Lemmatizer;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+import org.json.simple.parser.JSONParser;
 import se.lth.cs.srl.SemanticRoleLabeler;
 import se.lth.cs.srl.corpus.Predicate;
 import se.lth.cs.srl.corpus.Word;
@@ -24,10 +34,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.zip.ZipFile;
 
 /**
@@ -37,7 +44,7 @@ import java.util.zip.ZipFile;
  * <p>
  * Created by Alan Akbik on 8/28/17.
  */
-public class PipelineWrapper {
+class PipelineWrapper {
 
     // Language of this pipeline, defaults to English.
     private Language language = Language.ENGLISH;
@@ -58,7 +65,7 @@ public class PipelineWrapper {
      *
      * @param language Target language for this pipeline.
      */
-    public PipelineWrapper(Language language) {
+    PipelineWrapper(Language language) {
 
         this.language = language;
 
@@ -109,9 +116,8 @@ public class PipelineWrapper {
                             } finally {
                                 boolean delete = tmpFile.delete();
                             }
-                    } else {
-                        // print warning
-                    }
+                    }  // print warning
+
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -125,14 +131,14 @@ public class PipelineWrapper {
      * @param text Plain text sentence.
      * @return Parsed sentence.
      */
-    public Sentence parse(String text) {
+    Sentence parse(String text) {
 
         if (text.trim().equals("")) {
             return new Sentence();
         }
 
         //For Languages other than sinhala
-        if (!language.equals(Language.SINHALA)){
+        if (!language.equals(Language.SINHALA)) {
             // create an empty Annotation just with the given text
             Annotation document = new Annotation(text);
 
@@ -248,6 +254,7 @@ public class PipelineWrapper {
                 e.printStackTrace();
             } finally {
                 try {
+                    assert br != null;
                     br.close();
                     fr.close();
                 } catch (IOException e) {
@@ -266,12 +273,12 @@ public class PipelineWrapper {
                         new InputStreamReader(p.getInputStream()));
 
                 Sentence parse = new Sentence();
-                while((s = bR.readLine())!=null){
-                    if(!s.startsWith("%")){
+                while ((s = bR.readLine()) != null) {
+                    if (!s.startsWith("%")) {
                         ArrayList<String> wordsPos = new ArrayList<>();
-                        for (String word : s.split("\t")){
+                        for (String word : s.split("\t")) {
                             word = word.replaceAll("^[ \t]+|[ \t]+$", "");
-                            if(!word.equals("")){
+                            if (!word.equals("")) {
                                 wordsPos.add(word);
                             }
                         }
@@ -279,16 +286,17 @@ public class PipelineWrapper {
                         String word = wordsPos.get(0);
                         String pos;
                         // this is the POS tag of the token
-                        if (wordsPos.get(1).equals("NNC")){
+                        if (wordsPos.get(1).equals("NNC") || wordsPos.get(1).equals("NNP")) {
                             pos = "NN";
-                        } else if (wordsPos.get(1).equals("VP")){
+                        } else if (wordsPos.get(1).equals("VP")) {
                             pos = "VBP";
                         } else {
                             pos = wordsPos.get(1);
                         }
 
                         Token newtoken = parse.newToken().setText(word).setPos(pos);
-                        newtoken.setLemma(text);
+                        String base = this.getBaseWord(word); // get base word eg:දරුවාට base:දරුවා
+                        newtoken.setLemma(base);
                         // Determine universal dependencies from tagset
                         toUniversalDependencies(parse);
 
@@ -302,18 +310,50 @@ public class PipelineWrapper {
                 }
 
                 p.waitFor();
-                logger.info ("exit: " + p.exitValue());
+                logger.info("exit: " + p.exitValue());
                 p.destroy();
 
                 return parse;
             } catch (Exception e) {
-                logger.info (e);
+                logger.info(e);
             }
 
-    }
+        }
 
         return null;
-}
+    }
+
+    /**
+     * Get splitted word
+     *
+     * @param word original word
+     */
+    private String getBaseWord(String word) {
+
+        String postUrl = "http://127.0.0.1:5000/split";// put in your url
+        Map<String, String> obj=new HashMap<String, String>();
+        obj.put("word",word);
+        String jsonText = JSONValue.toJSONString(obj);
+        System.out.println(jsonText);
+        HttpClient httpClient = HttpClientBuilder.create().build();
+        HttpPost post = new HttpPost(postUrl);
+        StringEntity postingString = null;//gson.tojson() converts your pojo to json
+        try {
+            postingString = new StringEntity(jsonText, "UTF-8");
+            post.setEntity(postingString);
+            post.setHeader("Content-type", "application/json");
+            HttpResponse response = httpClient.execute(post);
+            HttpEntity entity = response.getEntity();
+            JSONParser parser = new JSONParser();
+            JSONObject json = (JSONObject) parser.parse(EntityUtils.toString(entity, "UTF-8"));
+            System.out.println((String) json.get("base"));
+            return (String) json.get("base");
+        } catch (org.json.simple.parser.ParseException | IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
 
     /**
      * Helper method to format sentence for SRL (MATE SRL somehow needs the root field as textual string in array).

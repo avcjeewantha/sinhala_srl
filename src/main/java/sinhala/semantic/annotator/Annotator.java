@@ -5,10 +5,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
-import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.*;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Scanner;
@@ -16,6 +17,7 @@ import java.util.Scanner;
 public class Annotator {
     private static final Logger logger = LogManager.getLogger(Annotator.class);
     private static LanguageDAO languageDAO = LanguageDAO.getInstance();
+    private static ArrayList<ArrayList> sentenceJsonObjects = new ArrayList<>();
 
     public static void main(String args[]) {
 
@@ -26,17 +28,30 @@ public class Annotator {
         PipelineWrapper tlPipeline = languageDAO.getPipeline(Language.SINHALA);
 
         // Initiate scanner
-        Scanner sc = new Scanner(System.in);
+//        Scanner sc = new Scanner(System.in);
 
-        while (true){
-            System.out.println("Enter English Sentence: ");
-            String sourceSentence = sc.nextLine();
-            System.out.println("Enter Sinhala Sentence: ");
-            String targetSentence = sc.nextLine();
+        File siObj = new File("test.si");
+        File enObj = new File("test.en");
+        File file = new File("output.json");
+        FileWriter fr = null;
+        BufferedWriter br = null;
 
-            if (sourceSentence.equals("e") || targetSentence.equals("e")){
-                break;
-            }else{
+        try {
+            Files.deleteIfExists(file.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            Scanner siReader = new Scanner(siObj);
+            Scanner enReader = new Scanner(enObj);
+            fr = new FileWriter(file, true);
+            br = new BufferedWriter(fr);
+
+            while (siReader.hasNextLine()) {
+                String targetSentence = siReader.nextLine();
+                String sourceSentence = enReader.nextLine();
+
                 Sentence parsedSL = slPipeline.parse(sourceSentence.trim());
 //                logger.info(parsedSL.toConllU());
 
@@ -44,11 +59,47 @@ public class Annotator {
 //                logger.info(parsedTL.toConllU());
 
                 ProcessedSentence processedSentence = alignAndProject(parsedSL, parsedTL, Language.SINHALA);
-//                String json = new Gson().toJson(processedSentence);
-//                logger.info("json = " + json);
-            }
 
+
+            }
+            br.write(sentenceJsonObjects.toString());
+            siReader.close();
+            enReader.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            try {
+                assert br != null;
+                br.close();
+                fr.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
+
+//        while (true){
+//            System.out.println("Enter English Sentence: ");
+//            String sourceSentence = sc.nextLine();
+//            System.out.println("Enter Sinhala Sentence: ");
+//            String targetSentence = sc.nextLine();
+//
+//            if (sourceSentence.equals("e") || targetSentence.equals("e")){
+//                break;
+//            }else{
+//                Sentence parsedSL = slPipeline.parse(sourceSentence.trim());
+////                logger.info(parsedSL.toConllU());
+//
+//                Sentence parsedTL = tlPipeline.parse(targetSentence.trim());
+////                logger.info(parsedTL.toConllU());
+//
+//                ProcessedSentence processedSentence = alignAndProject(parsedSL, parsedTL, Language.SINHALA);
+////                String json = new Gson().toJson(processedSentence);
+////                logger.info("json = " + json);
+//            }
+//
+//        }
 
 
 
@@ -64,7 +115,7 @@ public class Annotator {
      * @param targetLanguage Target language
      * @return Object containing all information on the annotation transfer for display in UI
      */
-    private static  ProcessedSentence alignAndProject(Sentence parsedSL, Sentence parsedTL, Language targetLanguage) {
+    private static ProcessedSentence alignAndProject(Sentence parsedSL, Sentence parsedTL, Language targetLanguage) {
 
         logger.debug(parsedSL);
         logger.debug(parsedTL);
@@ -84,6 +135,10 @@ public class Annotator {
 
         logger.debug(parallelSentence_projected.toString());
         logger.debug(parallelSentence_projected.getSentenceTL());
+        ArrayList jsonLst = parallelSentence_projected.getOutputJson();
+
+
+        sentenceJsonObjects.add(jsonLst);
 
         return getProcessedSentence(parallelSentence_projected, parsedTL);
     }

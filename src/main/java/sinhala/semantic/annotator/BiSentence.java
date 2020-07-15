@@ -4,9 +4,12 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by Alan Akbik on 8/28/17.
@@ -17,13 +20,13 @@ import java.util.Set;
 public class BiSentence {
 
     // The source side of the bisentence
-    Sentence sentenceSL;
+    private Sentence sentenceSL;
 
     // Target side of the bisentence
-    Sentence sentenceTL;
+    private Sentence sentenceTL;
 
     // Word alignments between both sentences
-    public Table<Token, Token, Double> aligments = HashBasedTable.create();
+    Table<Token, Token, Double> aligments = HashBasedTable.create();
 
     /**
      * Constructor for the bisentence. Requires source and target sentences.
@@ -31,7 +34,7 @@ public class BiSentence {
      * @param sentenceSL Source sentence
      * @param sentenceTL Target sentence
      */
-    public BiSentence(Sentence sentenceSL, Sentence sentenceTL) {
+    BiSentence(Sentence sentenceSL, Sentence sentenceTL) {
         this.sentenceSL = sentenceSL;
         this.sentenceTL = sentenceTL;
     }
@@ -69,7 +72,7 @@ public class BiSentence {
                     other = 0.5;
                     if (other > similarity) similarity = other;
                 }
-                System.out.println(similarity);
+                System.out.println(targetToken.getText() + sourceToken.getText() + similarity);
                 // if similarity exists, add alignment
                 if (similarity > 0.01) {
 
@@ -107,7 +110,7 @@ public class BiSentence {
      * @param token Token to which alignment is sough
      * @return Aligned token if exists (null otherwise)
      */
-    public Token getAligned(Token token) {
+    Token getAligned(Token token) {
 
         if (aligments.rowKeySet().contains(token)) {
             Map<Token, Double> row = aligments.row(token);
@@ -127,12 +130,12 @@ public class BiSentence {
      *
      * @param biSentence BiSentence from which to copy alignments
      */
-    public void copyAlignments(BiSentence biSentence) {
+    void copyAlignments(BiSentence biSentence) {
 
         for (Table.Cell<Token, Token, Double> alignment : biSentence.aligments.cellSet()) {
 
-            Token source = this.getSentenceSL().getToken(alignment.getRowKey().getId());
-            Token target = this.getSentenceTL().getToken(alignment.getColumnKey().getId());
+            Token source = this.getSentenceSL().getToken(Objects.requireNonNull(alignment.getRowKey()).getId());
+            Token target = this.getSentenceTL().getToken(Objects.requireNonNull(alignment.getColumnKey()).getId());
             this.aligments.put(source, target, alignment.getValue());
         }
     }
@@ -140,11 +143,11 @@ public class BiSentence {
     // ------------------------------------------------------------------------
     // Getters
     // ------------------------------------------------------------------------
-    public Sentence getSentenceSL() {
+    Sentence getSentenceSL() {
         return sentenceSL;
     }
 
-    public Sentence getSentenceTL() {
+    Sentence getSentenceTL() {
         return sentenceTL;
     }
 
@@ -186,12 +189,93 @@ public class BiSentence {
 
     }
 
+    /**
+     * Write output semantic frames into a csv file
+     */
+    ArrayList<JSONObject> getOutputJson() {
+        ArrayList<JSONObject> jsonLst = new ArrayList<>();
+        JSONParser parser = new JSONParser();
+
+        for (Token tl : this.sentenceTL.getTokens()) {
+            Map<String, String> tokenJsonObj = new HashMap<>();
+            if (tl.evokesFrame()) {
+                tokenJsonObj.put("text", tl.getText());
+                tokenJsonObj.put("pos", tl.getPos());
+                tokenJsonObj.put("frame", tl.getFrame().getLabel());
+            } else {
+                for (Frame frame : this.sentenceTL.getFrames()) {
+                    if (frame.hasTokenRole(tl)) {
+                        tokenJsonObj.put("text", tl.getText());
+                        tokenJsonObj.put("pos", tl.getPos());
+                        tokenJsonObj.put("frame", frame.getTokenRole(tl));
+                    } else {
+                        tokenJsonObj.put("text", tl.getText());
+                        tokenJsonObj.put("pos", tl.getPos());
+                        tokenJsonObj.put("frame", "_");
+                    }
+                }
+            }
+
+            try {
+                jsonLst.add((JSONObject) parser.parse(JSONValue.toJSONString(tokenJsonObj)));
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        }
+        return jsonLst;
+
+        /*
+           to csv
+         */
+//        File file = new File("output.csv");
+////        try {
+////            Files.deleteIfExists(file.toPath());
+////        } catch (IOException e) {
+////            e.printStackTrace();
+////        }
+//        FileWriter fr = null;
+//        BufferedWriter br = null;
+//        try {
+//            // to append to file, you need to initialize FileWriter using below constructor
+//            fr = new FileWriter(file, true);
+//            br = new BufferedWriter(fr);
+//            for (Token tl : this.sentenceTL.getTokens()) {
+//                if (tl.evokesFrame()) {
+//                    br.write(tl.getText() + "," + tl.getPos()+"," + tl.getFrame().getLabel());
+//                    br.newLine();
+//                } else {
+//                    for (Frame frame : this.sentenceTL.getFrames()) {
+//                        if (frame.hasTokenRole(tl)) {
+//                            br.write(tl.getText() + "," +tl.getPos()+"," + frame.getTokenRole(tl));
+//                            br.newLine();
+//                        }
+//                        else {
+//                            br.write(tl.getText() + "," + tl.getPos()+"," + "_");
+//                            br.newLine();
+//                        }
+//                    }
+//                }
+//            }
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        } finally {
+//            try {
+//                assert br != null;
+//                br.close();
+//                fr.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//        }
+    }
+
 
     /**
      * private class for alignments
      */
     private class Alignment {
-        public Alignment(Token sl, Token tl) {
+        Alignment(Token sl, Token tl) {
             this.sl = sl;
             this.tl = tl;
         }
@@ -206,3 +290,4 @@ public class BiSentence {
     }
 
 }
+
