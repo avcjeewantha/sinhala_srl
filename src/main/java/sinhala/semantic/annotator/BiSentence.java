@@ -72,9 +72,9 @@ public class BiSentence {
                     other = 0.5;
                     if (other > similarity) similarity = other;
                 }
-                System.out.println(targetToken.getText() + sourceToken.getText() + similarity);
+//                System.out.println(targetToken.getText() + sourceToken.getText() + similarity);
                 // if similarity exists, add alignment
-                if (similarity > 0.01) {
+                if (similarity > 0.05) {
 
                     int tokenDistance = sourceToken.getId() - targetToken.getId();
                     if (targetToken.getId() > sourceToken.getId())
@@ -198,21 +198,19 @@ public class BiSentence {
 
         for (Token tl : this.sentenceTL.getTokens()) {
             Map<String, String> tokenJsonObj = new HashMap<>();
-            if (tl.evokesFrame()) {
-                tokenJsonObj.put("text", tl.getText());
-                tokenJsonObj.put("pos", tl.getPos());
-                tokenJsonObj.put("frame", tl.getFrame().getLabel());
-            } else {
-                for (Frame frame : this.sentenceTL.getFrames()) {
-                    if (frame.hasTokenRole(tl)) {
-                        tokenJsonObj.put("text", tl.getText());
-                        tokenJsonObj.put("pos", tl.getPos());
-                        tokenJsonObj.put("frame", frame.getTokenRole(tl));
-                    } else {
-                        tokenJsonObj.put("text", tl.getText());
-                        tokenJsonObj.put("pos", tl.getPos());
-                        tokenJsonObj.put("frame", "_");
-                    }
+            for (Frame frame : this.sentenceTL.getFrames()) {
+                if (frame.hasTokenRole(tl)) {
+                    tokenJsonObj.put("text", tl.getText());
+                    tokenJsonObj.put("pos", tl.getPos());
+                    tokenJsonObj.put("frame", frame.getTokenRole(tl));
+                } else if (tl.evokesFrame()) {
+                    tokenJsonObj.put("text", tl.getText());
+                    tokenJsonObj.put("pos", tl.getPos());
+                    tokenJsonObj.put("frame", tl.getFrame().getLabel());
+                }else {
+                    tokenJsonObj.put("text", tl.getText());
+                    tokenJsonObj.put("pos", tl.getPos());
+                    tokenJsonObj.put("frame", "_");
                 }
             }
 
@@ -224,9 +222,14 @@ public class BiSentence {
         }
         return jsonLst;
 
-        /*
-           to csv
-         */
+
+
+    }
+
+//    /*
+//           to csv
+//         */
+//    public void toCSV() {
 //        File file = new File("output.csv");
 ////        try {
 ////            Files.deleteIfExists(file.toPath());
@@ -268,8 +271,7 @@ public class BiSentence {
 //                e.printStackTrace();
 //            }
 //        }
-    }
-
+//    }
 
     /**
      * private class for alignments
