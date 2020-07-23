@@ -30,8 +30,8 @@ public class AnnotationTransfer {
             // If we can align the source token, project PoS
             Token aligned = biSentence.getAligned(tokenSL);
             if (aligned != null) {
-//                aligned.setPosUniversal(tokenSL.getPosUniversal());
-//                aligned.setPos(tokenSL.getPos());
+                aligned.setPosUniversal(tokenSL.getPosUniversal());
+                aligned.setPos(tokenSL.getPos());
 
                 if (!tokenSL.getNer().equals("_"))
                     aligned.setNer(tokenSL.getNer());
