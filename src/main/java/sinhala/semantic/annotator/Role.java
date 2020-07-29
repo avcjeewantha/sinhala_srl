@@ -14,14 +14,20 @@ public class Role {
     // Syntactic head of this role.
     Token roleHead;
 
+    // constituent of Role
+    String constituent;
+
     /**
      * Constructor for role.
      * @param roleLabel Label of this role
      * @param roleHead Syntactic head of this role
+     * @param constituent Role constituent
      */
-    public Role(String roleLabel, Token roleHead) {
+    public Role(String roleLabel, Token roleHead, String constituent) {
         this.roleLabel = roleLabel;
         this.roleHead = roleHead;
+        // ADDED BY ME
+        this.constituent = constituent;
     }
 
     // ------------------------------------------------------------------------
@@ -33,6 +39,11 @@ public class Role {
 
     public Token getRoleHead() {
         return roleHead;
+    }
+
+    // ADDED BY ME
+    public String getConstituent() {
+        return constituent;
     }
 
 

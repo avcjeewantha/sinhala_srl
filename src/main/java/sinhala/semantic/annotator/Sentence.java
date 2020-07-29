@@ -170,7 +170,7 @@ public class Sentence {
                 String[] fields = line.split(separator);
                 for (int i = 12; i < fields.length; i++) {
                     if (!fields[i].equals("_")) {
-                        frames.get(i - 12).addRole(new Role(fields[i], sentence.getToken(tokenId)));
+                        frames.get(i - 12).addRole(new Role(fields[i], sentence.getToken(tokenId), ""));
                     }
                 }
             }

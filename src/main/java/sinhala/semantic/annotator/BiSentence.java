@@ -200,7 +200,8 @@ public class BiSentence {
             Map<String, String> tokenJsonObj = new HashMap<>();
             for (Frame frame : this.sentenceTL.getFrames()) {
                 if (frame.hasTokenRole(tl)) {
-                    tokenJsonObj.put("text", tl.getText());
+//                    tokenJsonObj.put("text", tl.getText());
+                    tokenJsonObj.put("text", frame.getRoleConstituent(tl));
                     tokenJsonObj.put("pos", tl.getPos());
                     tokenJsonObj.put("frame", frame.getTokenRole(tl));
                 } else if (tl.evokesFrame()) {

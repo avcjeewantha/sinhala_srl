@@ -67,6 +67,15 @@ public class Frame {
         return null;
     }
 
+    // ADDED BY ME
+    public String getRoleConstituent(Token token) {
+
+        for (Role role : roles) {
+            if (role.roleHead.equals(token)) return role.constituent;
+        }
+        return null;
+    }
+
     // ------------------------------------------------------------------------
     // Getters and setters
     // ------------------------------------------------------------------------

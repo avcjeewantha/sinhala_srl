@@ -37,6 +37,19 @@ public class AnnotationTransfer {
                     aligned.setNer(tokenSL.getNer());
             }
         }
+
+//        // Iterate through each token in target sentence
+//        for (Token tokenTL : biSentence.getSentenceTL().getTokens()) {
+//
+//            // If we can align the source token, project PoS
+//            Token aligned = biSentence.getAligned(tokenTL);
+//            if (aligned != null) {
+//                System.out.println(tokenTL.getPosUniversal());
+//                System.out.println(tokenTL.getPos());
+//                aligned.setPosUniversal(tokenTL.getPosUniversal());
+//                aligned.setPos(tokenTL.getPos());
+//            }
+//        }
     }
 
     public void transferSpans(BiSentence biSentence){
@@ -127,7 +140,8 @@ public class AnnotationTransfer {
                         }
                         logger.debug("   ---   best matching TL constituent: " + highestSimilarity + "\t" + bestTLcontituent);
                         if (bestTLcontituent != null) {
-                            frame.addRole(new Role(role.getRoleLabel(), bestTLcontituent.getHead()));
+                            // Changed Role object structure
+                            frame.addRole(new Role(role.getRoleLabel(), bestTLcontituent.getHead(), bestTLcontituent.toString()));
                         }
                     }
                 }
