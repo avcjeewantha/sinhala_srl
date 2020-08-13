@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
+import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -59,7 +60,8 @@ public class Annotator {
 //                logger.info(parsedTL.toConllU());
 
                 ProcessedSentence processedSentence = alignAndProject(parsedSL, parsedTL, Language.SINHALA);
-
+//                String json = new Gson().toJson(processedSentence);
+//                logger.debug("json = " + json.toString());
 
             }
             br.write(sentenceJsonObjects.toString());
