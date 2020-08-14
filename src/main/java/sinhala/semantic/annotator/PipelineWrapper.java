@@ -13,6 +13,7 @@ import edu.stanford.nlp.util.CoreMap;
 import is2.data.SentenceData09;
 import is2.lemmatizer.Lemmatizer;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -230,97 +231,55 @@ class PipelineWrapper {
                 }
                 return parse;
             }
-        } else {
+        } else {    // For sinhala language
+
             String[] wordList = text.split(" ");
-            File file = new File("tag.txt");
-            try {
-                Files.deleteIfExists(file.toPath());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            FileWriter fr = null;
-            BufferedWriter br = null;
-            try {
-                // to append to file, you need to initialize FileWriter using below constructor
-                fr = new FileWriter(file, true);
-                br = new BufferedWriter(fr);
-                for (String aWordList : wordList) {
-                    // you can use write or append method
-                    br.write(aWordList.replaceAll("^[ \t]+|[ \t]+$", ""));
-                    br.newLine();
-                }
+            Sentence parse = new Sentence();
+            Map PosTagMap = this.getSinhalaPosTag(text);
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    assert br != null;
-                    br.close();
-                    fr.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            for(String word:wordList){
 
-
-            String s;
-            Process p;
-//            StringBuilder output = new StringBuilder();
-
-            try {
-                p = Runtime.getRuntime().exec("tnt ./tnt/models/sinhala_final ./tag.txt");
-                BufferedReader bR = new BufferedReader(
-                        new InputStreamReader(p.getInputStream()));
-
-                Sentence parse = new Sentence();
-                while ((s = bR.readLine()) != null) {
-                    if (!s.startsWith("%")) {
-                        ArrayList<String> wordsPos = new ArrayList<>();
-                        for (String word : s.split("\t")) {
-                            word = word.replaceAll("^[ \t]+|[ \t]+$", "");
-                            if (!word.equals("")) {
-                                wordsPos.add(word);
-                            }
-                        }
-                        // this is the text of the token
-                        String word = wordsPos.get(0);
-                        String pos;
-                        // this is the POS tag of the token
-                        if (wordsPos.get(1).equals("NNC") || wordsPos.get(1).equals("NNP")) {
-                            pos = "NN";
-                        } else if (wordsPos.get(1).equals("VP")) {
-                            pos = "VBP";
-                        } else {
-                            pos = wordsPos.get(1);
-                        }
-
-                        Token newtoken = parse.newToken().setText(word).setPos(pos);
-                        String base = this.getBaseWord(word); // get base word eg:දරුවාට base:දරුවා
-                        newtoken.setLemma(base);
-                        // Determine universal dependencies from tagset
-                        toUniversalDependencies(parse);
-
-//                        output.append(s.split("\t")[0]).append(s.split("\t")[2]).append("\n");
-                    }
-                }
-
+                assert PosTagMap != null;
+                Token newtoken = parse.newToken().setText(word).setPos((String) PosTagMap.get(word));
+                String base = this.getBaseWord(word); // get base word eg:දරුවාට base:දරුවා
+                newtoken.setLemma(base);
+                // Determine universal dependencies from tagset
                 toUniversalDependencies(parse);
-                for (Token token : parse.getTokens()) {
-                    if (token.getHeadId() == 0) token.setDeprel("root");
-                }
 
-                p.waitFor();
-                logger.info("exit: " + p.exitValue());
-                p.destroy();
-
-                return parse;
-            } catch (Exception e) {
-                logger.info(e);
             }
 
+            toUniversalDependencies(parse);
+            for (Token token : parse.getTokens()) {
+                if (token.getHeadId() == 0) token.setDeprel("root");
+            }
+
+            return parse;
         }
 
         return null;
+    }
+
+    /**
+     * Method to make http post request with json object
+     * @param url Url to execute
+     * @return JsonObject
+     */
+    private JSONObject makeHttpPost(String url, String jsonText ){
+        HttpClient httpClient = HttpClientBuilder.create().build();
+        HttpPost post = new HttpPost(url);
+        StringEntity postingString = null;//gson.tojson() converts your pojo to json
+        try {
+            postingString = new StringEntity(jsonText, "UTF-8");
+            post.setEntity(postingString);
+            post.setHeader("Content-type", "application/json");
+            HttpResponse response = httpClient.execute(post);
+            HttpEntity entity = response.getEntity();
+            JSONParser parser = new JSONParser();
+            return (JSONObject) parser.parse(EntityUtils.toString(entity, "UTF-8"));
+        } catch (org.json.simple.parser.ParseException | IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**
@@ -330,30 +289,69 @@ class PipelineWrapper {
      */
     private String getBaseWord(String word) {
 
-        String postUrl = "http://127.0.0.1:5000/split";// put in your url
-        Map<String, String> obj=new HashMap<String, String>();
+//        String postUrl = "http://127.0.0.1:5000/split";// put in your url
+        Properties props = this.loadPropFile();
+        String postUrl = "http://"+props.getProperty("serverAddress")+"/splitt";// put in your url
+
+        Map<String, String> obj= new HashMap<>();
         obj.put("word",word);
         String jsonText = JSONValue.toJSONString(obj);
         System.out.println(jsonText);
-        HttpClient httpClient = HttpClientBuilder.create().build();
-        HttpPost post = new HttpPost(postUrl);
-        StringEntity postingString = null;//gson.tojson() converts your pojo to json
-        try {
-            postingString = new StringEntity(jsonText, "UTF-8");
-            post.setEntity(postingString);
-            post.setHeader("Content-type", "application/json");
-            HttpResponse response = httpClient.execute(post);
-            HttpEntity entity = response.getEntity();
-            JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(EntityUtils.toString(entity, "UTF-8"));
-            System.out.println((String) json.get("base"));
-            return (String) json.get("base");
-        } catch (org.json.simple.parser.ParseException | IOException e) {
-            e.printStackTrace();
+        JSONObject result = this.makeHttpPost(postUrl,jsonText);
+            if (result != null){
+                System.out.println((String) result.get("base"));
+                return (String) result.get("base");
+            } else {
+                return null;
+            }
+    }
+
+
+    /**
+     * Get sinhala postag
+     * @param text Sentence to get postag
+     */
+    private Map getSinhalaPosTag(String text ) {
+
+        String[] wordList = text.split(" ");
+        Properties props = this.loadPropFile();
+        String postUrl = "http://"+props.getProperty("serverAddress")+":3000/getpos";// put in your url
+        Map<String, String> postagMap=new HashMap<String, String>();
+
+        Map<String, String> postJson=new HashMap<String, String>();
+        postJson.put("sentence",text);
+        String jsonText = JSONValue.toJSONString(postJson);         // Create POST request json string
+
+        JSONObject result = this.makeHttpPost(postUrl,jsonText);    // Call http post request and get results
+
+        if (result != null){
+            for (String word : wordList) {
+                System.out.println(word);
+                System.out.println((String) result.get(word));         // Put outputs into a map
+                postagMap.put(word,(String) result.get(word));
+            }
+            return postagMap;
+        } else {
             return null;
         }
     }
 
+    /**
+     * Load config.properties file for server details
+     * @return Properties object
+     */
+    private Properties loadPropFile(){
+        String resourceName = "config.properties";      // property file to load server details
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        Properties props = new Properties();
+        try(InputStream resourceStream = loader.getResourceAsStream(resourceName)) {
+            props.load(resourceStream);
+            System.out.println("Successfully loaded 'config.properties' file...");
+        }catch (IOException e){
+            System.out.println("Error loading 'config.properties' file...");
+        }
+        return props;
+    }
 
     /**
      * Helper method to format sentence for SRL (MATE SRL somehow needs the root field as textual string in array).
