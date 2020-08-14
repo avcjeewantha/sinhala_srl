@@ -1,0 +1,21 @@
+==========================Instructions======================
+$$$One Time$$$
+1. Install java jdk 1.8
+2. Install python3	"sudo yum install -y python3"
+3. Create virtual envirenment	"python3 -m venv myenv"
+4. Activate venv	"source venv/bin/activate"
+5. Install flask	"pip install flask"
+6. Install Sinlin project dependencies
+7. Create Apache reverse proxy
+
+	<VirtualHost *:80>
+        	ProxyPreserveHost on
+        	ProxyPass /splitt http://127.0.0.1:5000/split
+        	ProxyPassReverse /splitt http://127.0.0.1:5000/split
+	</VirtualHost>
+
+
+$$$Every time running$$$
+1. Add sinling into pythonpath "export PYTHONPATH=/home/ec2-user/wordsplitter/sinling"
+2. Activate venv	"source venv/bin/activate"
+3. Run the app		"python -m flask run"
