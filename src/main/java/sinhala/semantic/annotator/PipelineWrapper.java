@@ -69,7 +69,6 @@ class PipelineWrapper {
     PipelineWrapper(Language language) {
 
         this.language = language;
-
         String languageString = language.toString().substring(0, 1).toUpperCase() + language.toString().substring(1).toLowerCase();
 
         //---------------------------------
@@ -133,7 +132,6 @@ class PipelineWrapper {
      * @return Parsed sentence.
      */
     Sentence parse(String text) {
-
         if (text.trim().equals("")) {
             return new Sentence();
         }

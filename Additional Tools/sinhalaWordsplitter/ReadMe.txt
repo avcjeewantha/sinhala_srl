@@ -5,6 +5,7 @@ $$$One Time$$$
 3. Create virtual envirenment	"python3 -m venv myenv"
 4. Activate venv	"source venv/bin/activate"
 5. Install flask	"pip install flask"
+5. Install nltk	"pip install nltk"
 6. Install Sinlin project dependencies
 7. Create Apache reverse proxy
 
@@ -13,7 +14,8 @@ $$$One Time$$$
         	ProxyPass /splitt http://127.0.0.1:5000/split
         	ProxyPassReverse /splitt http://127.0.0.1:5000/split
 	</VirtualHost>
-
+8. If apache web server is not installed, install it before creating reverce proxy. "sudo yum install httpd"
+9. Restart apache server "sudo systemctl restart httpd"
 
 $$$Every time running$$$
 1. Add sinling into pythonpath "export PYTHONPATH=/home/ec2-user/wordsplitter/sinling"
