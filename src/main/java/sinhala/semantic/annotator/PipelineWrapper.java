@@ -12,8 +12,8 @@ import edu.stanford.nlp.semgraph.SemanticGraphEdge;
 import edu.stanford.nlp.util.CoreMap;
 import is2.data.SentenceData09;
 import is2.lemmatizer.Lemmatizer;
+import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -34,7 +34,6 @@ import org.apache.logging.log4j.Logger;
 //import zalando.analytics.base.Language;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.zip.ZipFile;
 
@@ -231,15 +230,17 @@ class PipelineWrapper {
             }
         } else {    // For sinhala language
 
-            String[] wordList = text.split(" ");
+//            String[] wordList = text.split(" ");
             Sentence parse = new Sentence();
-            Map PosTagMap = this.getSinhalaPosTag(text);
+//            Map PosTagMap = this.getSinhalaPosTag(text);
+            Pair<List, Map> result = this.identifyCompoundVerbs(text);      // identify compound verbs in sentence
+            List tokenList = result.getKey();
+            Map posTagMap = result.getValue();
 
-            for(String word:wordList){
+            for (Object word : tokenList) {
 
-                assert PosTagMap != null;
-                Token newtoken = parse.newToken().setText(word).setPos((String) PosTagMap.get(word));
-                String base = this.getBaseWord(word); // get base word eg:දරුවාට base:දරුවා
+                Token newtoken = parse.newToken().setText((String) word).setPos((String) posTagMap.get(word));
+                String base = this.getBaseWord((String) word); // get base word eg:දරුවාට base:දරුවා
                 newtoken.setLemma(base);
                 // Determine universal dependencies from tagset
                 toUniversalDependencies(parse);
@@ -258,11 +259,111 @@ class PipelineWrapper {
     }
 
     /**
+     * Function to identify the compound verbs of the sentence
+     *
+     * @param sentence Sinhala Sentence
+     * @return pair object of wordlist, Map of tokens and their pos tags
+     */
+    private Pair<List, Map> identifyCompoundVerbs(String sentence) {
+        logger.info("Finding compound verbs");
+        String str[] = sentence.split(" ");     // Whitespace tokenizing
+        List<String> wordList = new ArrayList<>(Arrays.asList(str));
+        Map<String, String> posTagMap = this.getSinhalaPosTag(sentence);        // Postags for each word in sentence
+        List<String> verbTags = Arrays.asList("VNN", "VFM", "VNF", "VP", "NCV", "JCV", "RPCV", "SVCV");     // Tag set to identify compound verbs
+        ArrayList<String> compVerbWords = new ArrayList<>();        // Words that have above verb tags as pos
+        ArrayList<String> compVerbs = new ArrayList<>();        // Identified compound verbs
+        ArrayList<String> compVerbObject = new ArrayList<>();       // List to store words of each compound verb
+        Map<String, String> pos2Word = new HashMap<>();     // Final pos to token map includes compound verbs
+        boolean isPairIdentified = false;       // Var to notify whether comp verb is identified
+
+        for (String word : wordList) {
+            assert posTagMap != null;
+            String pos = posTagMap.get(word);       // get words containing above tags
+            if (verbTags.contains(pos)) {
+                compVerbWords.add(word);
+            }
+        }
+
+        if (compVerbWords.size() > 1) {
+            for (int i = 0; i < compVerbWords.size() - 1; i++) {        // If has more than two words
+                String firstWord = compVerbWords.get(i);
+                String secondWord = compVerbWords.get(i + 1);
+                int indexDiff = wordList.indexOf(secondWord) - wordList.indexOf(firstWord); // get index difference of two nearby words from original sentence
+                if (indexDiff == 1) {
+                    isPairIdentified = true;        // If difference =1 identify as nearby words (comp verbs here, logic: nearby words containing above tags are compound verbs)
+                    if (i + 1 == compVerbWords.size() - 1) {
+                        compVerbObject.add(firstWord);
+                        compVerbObject.add(secondWord);     // if second word is the last add both
+                        compVerbs.add(Joiner.on(" ").join(compVerbObject));
+
+                        removeIdentifiedCompWordsAndPos(wordList, posTagMap, compVerbObject); // clear identified words and their pos from original arrays
+
+                        isPairIdentified = false;
+                    } else {
+                        compVerbObject.add(firstWord);
+                    }
+                } else {
+                    if (isPairIdentified) {     // if difference not 1 and pair identified before
+                        compVerbObject.add(firstWord);
+                        compVerbs.add(Joiner.on(" ").join(compVerbObject));
+
+                        removeIdentifiedCompWordsAndPos(wordList, posTagMap, compVerbObject);
+
+                        compVerbObject.clear();     // clear the list to get next compound word set
+                        isPairIdentified = false;
+                    }
+                }
+            }
+
+            logger.info("Compound verbs found: " + compVerbs.toString());
+
+            for (String compVerb : compVerbs) {
+                wordList.set(wordList.indexOf(compVerb.split(" ")[0]), compVerb);    // replace normal word with compound verb in original list
+            }
+
+            for (String word : wordList) {
+                assert posTagMap != null;
+                if (compVerbs.contains(word)) {
+                    pos2Word.put(word, "VERB");     // Add pos of compound verb as VERB
+                } else {
+                    pos2Word.put(word, posTagMap.get(word));
+                }
+
+            }
+
+            return new Pair<>(wordList, pos2Word);
+
+        } else {
+            for (String word : wordList) {
+                pos2Word.put(word, posTagMap.get(word));     // Return as it is
+            }
+            return new Pair<>(wordList, pos2Word);
+        }
+    }
+
+    /**
+     * Function to remove identified compound verbs and their pos from originals
+     *
+     * @param wordList       Original word list
+     * @param posTagMap      Original pos tag map
+     * @param compVerbObject Compound word list
+     */
+    private void removeIdentifiedCompWordsAndPos(List<String> wordList, Map<String, String> posTagMap, ArrayList<String> compVerbObject) {
+        for (int j = 1; j < compVerbObject.size(); j++) {
+            wordList.remove(compVerbObject.get(j));
+            assert posTagMap != null;
+            int finalJ = j;
+            posTagMap.keySet().removeIf(key -> key.equals(compVerbObject.get(finalJ)));
+        }
+    }
+
+    /**
      * Method to make http post request with json object
+     *
      * @param url Url to execute
      * @return JsonObject
      */
-    private JSONObject makeHttpPost(String url, String jsonText ){
+    private JSONObject makeHttpPost(String url, String jsonText) {
         HttpClient httpClient = HttpClientBuilder.create().build();
         HttpPost post = new HttpPost(url);
         StringEntity postingString = null;//gson.tojson() converts your pojo to json
@@ -289,44 +390,45 @@ class PipelineWrapper {
 
 //        String postUrl = "http://127.0.0.1:5000/split";// put in your url
         Properties props = this.loadPropFile();
-        String postUrl = "http://"+props.getProperty("serverAddress")+"/splitt";// put in your url
+        String postUrl = "http://" + props.getProperty("serverAddress") + "/splitt";// put in your url
 
-        Map<String, String> obj= new HashMap<>();
-        obj.put("word",word);
+        Map<String, String> obj = new HashMap<>();
+        obj.put("word", word);
         String jsonText = JSONValue.toJSONString(obj);
         System.out.println(jsonText);
-        JSONObject result = this.makeHttpPost(postUrl,jsonText);
-            if (result != null){
-                System.out.println((String) result.get("base"));
-                return (String) result.get("base");
-            } else {
-                return null;
-            }
+        JSONObject result = this.makeHttpPost(postUrl, jsonText);
+        if (result != null) {
+            System.out.println((String) result.get("base"));
+            return (String) result.get("base");
+        } else {
+            return null;
+        }
     }
 
 
     /**
      * Get sinhala postag
+     *
      * @param text Sentence to get postag
      */
-    private Map getSinhalaPosTag(String text ) {
+    private Map<String, String> getSinhalaPosTag(String text) {
 
         String[] wordList = text.split(" ");
         Properties props = this.loadPropFile();
-        String postUrl = "http://"+props.getProperty("serverAddress")+":3000/getpos";// put in your url
-        Map<String, String> postagMap=new HashMap<String, String>();
+        String postUrl = "http://" + props.getProperty("serverAddress") + ":3000/getpos";// put in your url
+        Map<String, String> postagMap = new HashMap<String, String>();
 
-        Map<String, String> postJson=new HashMap<String, String>();
-        postJson.put("sentence",text);
+        Map<String, String> postJson = new HashMap<String, String>();
+        postJson.put("sentence", text);
         String jsonText = JSONValue.toJSONString(postJson);         // Create POST request json string
 
-        JSONObject result = this.makeHttpPost(postUrl,jsonText);    // Call http post request and get results
+        JSONObject result = this.makeHttpPost(postUrl, jsonText);    // Call http post request and get results
 
-        if (result != null){
+        if (result != null) {
             for (String word : wordList) {
                 System.out.println(word);
                 System.out.println((String) result.get(word));         // Put outputs into a map
-                postagMap.put(word,(String) result.get(word));
+                postagMap.put(word, (String) result.get(word));
             }
             return postagMap;
         } else {
@@ -336,16 +438,17 @@ class PipelineWrapper {
 
     /**
      * Load config.properties file for server details
+     *
      * @return Properties object
      */
-    private Properties loadPropFile(){
+    private Properties loadPropFile() {
         String resourceName = "config.properties";      // property file to load server details
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
         Properties props = new Properties();
-        try(InputStream resourceStream = loader.getResourceAsStream(resourceName)) {
+        try (InputStream resourceStream = loader.getResourceAsStream(resourceName)) {
             props.load(resourceStream);
             System.out.println("Successfully loaded 'config.properties' file...");
-        }catch (IOException e){
+        } catch (IOException e) {
             System.out.println("Error loading 'config.properties' file...");
         }
         return props;

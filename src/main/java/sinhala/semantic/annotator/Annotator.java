@@ -131,7 +131,7 @@ public class Annotator {
         logger.debug(parallelSentence_srlonly.toString());
         logger.debug(parsedTL);
 
-        BiSentence parallelSentence_projected = new BiSentence(parsedSL, Sentence.fromTokenized(parsedTL.toSentence()));
+        BiSentence parallelSentence_projected = new BiSentence(parsedSL, parsedTL);
         parallelSentence_projected.copyAlignments(parallelSentence_srlonly);
         transfer.transfer(parallelSentence_projected);
 
