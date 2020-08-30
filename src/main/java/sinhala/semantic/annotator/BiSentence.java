@@ -4,6 +4,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
+import org.apache.logging.log4j.core.util.Assert;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.json.simple.parser.JSONParser;
@@ -192,47 +193,58 @@ public class BiSentence {
     /**
      * Write output semantic frames into a csv file
      */
-    ArrayList<JSONObject> getOutputJson() {
+    ArrayList<JSONObject> getOutputJson(Language language) {
         ArrayList<JSONObject> jsonLst = new ArrayList<>();
         JSONParser parser = new JSONParser();
-
-        for (Token tl : this.sentenceTL.getTokens()) {
-            Map<String, String> tokenJsonObj = new HashMap<>();
-            ArrayList<String> frameLst = new ArrayList<>();
-            for (Frame frame : this.sentenceTL.getFrames()) {
-                if (frame.hasTokenRole(tl)) {
+        Sentence sentence = null;
+        if (language.equals(Language.SINHALA)){
+            sentence = this.sentenceTL;
+        } else if (language.equals(Language.SINHALA)){
+            sentence = this.sentenceTL;
+        }
+        try {
+            assert sentence != null;
+            for (Token tl : sentence.getTokens()) {
+                Map<String, String> tokenJsonObj = new HashMap<>();
+                ArrayList<String> frameLst = new ArrayList<>();
+                for (Frame frame : sentence.getFrames()) {
+                    if (frame.hasTokenRole(tl)) {
 //                    tokenJsonObj.put("text", tl.getText());
-                    tokenJsonObj.put("text", frame.getRoleConstituent(tl));
-                    tokenJsonObj.put("pos", tl.getPos());
-//                    tokenJsonObj.put("frame", frame.getTokenRole(tl));
-                    frameLst.add(frame.getTokenRole(tl));                       // Add tokenroles into list
-                } else if (tl.evokesFrame()) {
-                    tokenJsonObj.put("text", tl.getText());
-                    tokenJsonObj.put("pos", tl.getPos());
-//                    tokenJsonObj.put("frame", tl.getFrame().getLabel());
-                    if (!frameLst.contains(tl.getFrame().getLabel())){          // Check whether frame label available to avoid repetition
-                        frameLst.add(tl.getFrame().getLabel());
-                    }
+                        tokenJsonObj.put("text", frame.getRoleConstituent(tl));
+//                    tokenJsonObj.put("pos", tl.getPos());
+                        tokenJsonObj.put("frame", frame.getTokenRole(tl));
+                        frameLst.add(frame.getTokenRole(tl));                       // Add tokenroles into list
+                    } else if (tl.evokesFrame()) {
+                        tokenJsonObj.put("text", tl.getText());
+//                    tokenJsonObj.put("pos", tl.getPos());
+                        tokenJsonObj.put("frame", tl.getFrame().getLabel());
+                        if (!frameLst.contains(tl.getFrame().getLabel())) {          // Check whether frame label available to avoid repetition
+                            frameLst.add(tl.getFrame().getLabel());
+                        }
 
-                }else {
-                    tokenJsonObj.put("text", tl.getText());
-                    tokenJsonObj.put("pos", tl.getPos());
-//                    tokenJsonObj.put("frame", "_");
-                    frameLst.add("_");
+                    } else {
+                        tokenJsonObj.put("text", tl.getText());
+//                    tokenJsonObj.put("pos", tl.getPos());
+                        tokenJsonObj.put("frame", "_");
+                        frameLst.add("_");
+                    }
+                }
+                if (frameLst.size() != 0) {
+                    tokenJsonObj.put("frame", frameLst.toString());         // Append Role list into jsonObject map
+                }
+
+                try {
+                    jsonLst.add((JSONObject) parser.parse(JSONValue.toJSONString(tokenJsonObj)));
+                } catch (ParseException e) {
+                    e.printStackTrace();
                 }
             }
-            tokenJsonObj.put("frame", frameLst.toString());         // Append Role list into jsonObject map
-
-            try {
-                jsonLst.add((JSONObject) parser.parse(JSONValue.toJSONString(tokenJsonObj)));
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
+            return jsonLst;
+        } catch (NullPointerException e){
+            System.out.println(Arrays.toString(e.getStackTrace()));
+            System.out.println("Invalid language definition!");
+            return null;
         }
-        return jsonLst;
-
-
-
     }
 
 //    /*

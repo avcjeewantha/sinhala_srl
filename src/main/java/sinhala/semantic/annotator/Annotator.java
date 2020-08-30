@@ -5,7 +5,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Table;
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
-import com.google.gson.Gson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,7 +17,8 @@ import java.util.Scanner;
 public class Annotator {
     private static final Logger logger = LogManager.getLogger(Annotator.class);
     private static LanguageDAO languageDAO = LanguageDAO.getInstance();
-    private static ArrayList<ArrayList> sentenceJsonObjects = new ArrayList<>();
+    private static ArrayList<ArrayList> sentenceJsonObjectsEN = new ArrayList<>();
+    private static ArrayList<ArrayList> sentenceJsonObjectsSI = new ArrayList<>();
 
     public static void main(String args[]) {
 
@@ -33,21 +33,11 @@ public class Annotator {
 
         File siObj = new File("test.si");
         File enObj = new File("test.en");
-        File file = new File("output.json");
-        FileWriter fr = null;
-        BufferedWriter br = null;
 
-        try {
-            Files.deleteIfExists(file.toPath());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         try {
             Scanner siReader = new Scanner(siObj);
             Scanner enReader = new Scanner(enObj);
-            fr = new FileWriter(file, true);
-            br = new BufferedWriter(fr);
 
             while (siReader.hasNextLine()) {
                 String targetSentence = siReader.nextLine();
@@ -64,20 +54,12 @@ public class Annotator {
 //                logger.debug("json = " + json.toString());
 
             }
-            br.write(sentenceJsonObjects.toString());
+            writeOutputJsonIntoFile(Language.ENGLISH);      // Write outputs into a file
+            writeOutputJsonIntoFile(Language.SINHALA);
             siReader.close();
             enReader.close();
-
-        } catch (IOException e) {
+        } catch (FileNotFoundException e){
             e.printStackTrace();
-        }finally {
-            try {
-                assert br != null;
-                br.close();
-                fr.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
 
 
@@ -110,6 +92,43 @@ public class Annotator {
     }
 
     /**
+     * Method to write json outputs into a file
+     * @param language language object
+     */
+    private static void writeOutputJsonIntoFile(Language language){
+        File file = new File("output"+language.toString()+".json");
+        FileWriter fr = null;
+        BufferedWriter br = null;
+
+        try {
+            Files.deleteIfExists(file.toPath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            fr = new FileWriter(file, true);
+            br = new BufferedWriter(fr);
+            if (language.equals(Language.ENGLISH)){
+                br.write(sentenceJsonObjectsEN.toString());
+            } else if (language.equals(Language.SINHALA)){
+                br.write(sentenceJsonObjectsSI.toString());
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            try {
+                assert br != null;
+                br.close();
+                fr.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
      * Internal method that executes annotation projection for a sentence pair and target language
      *
      * @param parsedSL Parsed English source sentence
@@ -137,10 +156,11 @@ public class Annotator {
 
         logger.debug(parallelSentence_projected.toString());
         logger.debug(parallelSentence_projected.getSentenceTL());
-        ArrayList jsonLst = parallelSentence_projected.getOutputJson();
+        ArrayList jsonLstSI = parallelSentence_projected.getOutputJson(Language.SINHALA);
+        ArrayList jsonLstEN = parallelSentence_projected.getOutputJson(Language.ENGLISH);
 
-
-        sentenceJsonObjects.add(jsonLst);
+        sentenceJsonObjectsEN.add(jsonLstEN);
+        sentenceJsonObjectsSI.add(jsonLstSI);
 
         return getProcessedSentence(parallelSentence_projected, parsedTL);
     }
