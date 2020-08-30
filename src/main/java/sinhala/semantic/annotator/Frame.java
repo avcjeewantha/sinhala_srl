@@ -66,6 +66,19 @@ public class Frame {
         }
         return null;
     }
+    /**
+     * Get role of a given Token
+     *
+     * @param token Token for which to retrieve role label
+     * @return role object of given Token
+     */
+    public Role getRole(Token token) {
+
+        for (Role role : roles) {
+            if (role.roleHead.equals(token)) return role;
+        }
+        return null;
+    }
 
     // ADDED BY ME
     public String getRoleConstituent(Token token) {

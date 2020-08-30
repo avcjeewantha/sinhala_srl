@@ -197,10 +197,10 @@ public class BiSentence {
         ArrayList<JSONObject> jsonLst = new ArrayList<>();
         JSONParser parser = new JSONParser();
         Sentence sentence = null;
-        if (language.equals(Language.SINHALA)){
+        if (language.equals(Language.SINHALA)) {
             sentence = this.sentenceTL;
-        } else if (language.equals(Language.SINHALA)){
-            sentence = this.sentenceTL;
+        } else if (language.equals(Language.ENGLISH)) {
+            sentence = this.sentenceSL;
         }
         try {
             assert sentence != null;
@@ -209,8 +209,19 @@ public class BiSentence {
                 ArrayList<String> frameLst = new ArrayList<>();
                 for (Frame frame : sentence.getFrames()) {
                     if (frame.hasTokenRole(tl)) {
+                        String constituent;
 //                    tokenJsonObj.put("text", tl.getText());
-                        tokenJsonObj.put("text", frame.getRoleConstituent(tl));
+                        if (language.equals(Language.ENGLISH)) {
+                            constituent = frame.getRole(tl).getRoleHead().getConstituent(tl).toStringFull();  // get constituents
+                        } else {
+                            constituent = frame.getRoleConstituent(tl);
+                        }
+
+                        for (String word : constituent.split(" ")) {
+                            jsonLst.removeIf(jsonObject -> jsonObject.get("text").equals(word));            // remove previously added words that are part of constituent from json
+                        }                                                                                   // Eg: Constituent = The train, remove previously identified word "The"
+
+                        tokenJsonObj.put("text", constituent);      // Add constituent as text
 //                    tokenJsonObj.put("pos", tl.getPos());
                         tokenJsonObj.put("frame", frame.getTokenRole(tl));
                         frameLst.add(frame.getTokenRole(tl));                       // Add tokenroles into list
@@ -240,7 +251,7 @@ public class BiSentence {
                 }
             }
             return jsonLst;
-        } catch (NullPointerException e){
+        } catch (NullPointerException e) {
             System.out.println(Arrays.toString(e.getStackTrace()));
             System.out.println("Invalid language definition!");
             return null;
