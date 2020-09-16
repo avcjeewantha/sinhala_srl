@@ -7,6 +7,6 @@ $$$one time$$$
 
 $$$Everytime Running$$$
 4. Add TnT tool into path variable
-	for default aws "export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/ec2-user/.local/bin:/home/ec2-user/bin:/home/ec2-user/sinhalaPosTagger/tnt"
+	for default aws "export PATH=/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/ec2-user/.local/bin:/home/ec2-user/bin:/home/ec2-user/semantic/Additional\ Tools/sinhalaPosTagger/tnt"
 5. Run the jar file
 	"java -jar pos-0.0.1-SNAPSHOT.jar"
