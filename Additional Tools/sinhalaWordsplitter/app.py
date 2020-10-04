@@ -1,8 +1,8 @@
 from flask import Flask, redirect, url_for, request, render_template
-#import sys
+import sys
 
-#sys.path.insert(0, "/home/ec2-user/wordSplitter/sinling")
-#sys.path.append('..sinling')
+sys.path.insert(0, "/home/ec2-user/wordSplitter/sinling")
+sys.path.append('..sinling')
 from sinling import word_splitter
 
 app = Flask(__name__)
