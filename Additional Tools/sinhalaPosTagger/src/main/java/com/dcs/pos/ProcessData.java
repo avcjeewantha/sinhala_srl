@@ -13,7 +13,7 @@ import java.util.Map;
 public class ProcessData {
     public void processSentence(String sentence){
         String[] wordList = sentence.split(" ");
-        File file = new File("tag.txt");
+        File file = new File("~/sinhalaPosTagger/tag.txt");
         try {
             Files.deleteIfExists(file.toPath());
         } catch (IOException e) {
@@ -51,7 +51,7 @@ public class ProcessData {
 //            StringBuilder output = new StringBuilder();
 
         try {
-            p = Runtime.getRuntime().exec("tnt ./tnt/models/sinhala_final ./tag.txt");
+            p = Runtime.getRuntime().exec("~/sinhalaPosTagger/tnt/tnt ~/sinhalaPosTagger/tnt/models/sinhala_final ~/sinhalaPosTagger/tag.txt");
             BufferedReader bRInput = new BufferedReader(
                     new InputStreamReader(p.getInputStream()));
 
