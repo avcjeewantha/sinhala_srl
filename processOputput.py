@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-with open('output.json','r') as file:
+with open('outputENGLISH.json','r') as file:
     data = json.load(file)
 
 df_json = pd.DataFrame(data)

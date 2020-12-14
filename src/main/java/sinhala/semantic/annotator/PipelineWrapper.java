@@ -390,7 +390,7 @@ class PipelineWrapper {
 
 //        String postUrl = "http://127.0.0.1:5000/split";// put in your url
         Properties props = this.loadPropFile();
-        String postUrl = "http://" + props.getProperty("serverAddress") + "/splitt";// put in your url
+        String postUrl = "http://" + props.getProperty("serverAddress") + "/split";// put in your url
 
         Map<String, String> obj = new HashMap<>();
         obj.put("word", word);
@@ -415,7 +415,7 @@ class PipelineWrapper {
 
         String[] wordList = text.split(" ");
         Properties props = this.loadPropFile();
-        String postUrl = "http://" + props.getProperty("serverAddress") + ":3000/getpos";// put in your url
+        String postUrl = "http://" + props.getProperty("serverAddress") + "/getpos";// put in your url
         Map<String, String> postagMap = new HashMap<String, String>();
 
         Map<String, String> postJson = new HashMap<String, String>();
